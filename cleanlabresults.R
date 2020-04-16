@@ -18,6 +18,23 @@ dplyr::mutate(sex=case_when(
   sex %in% c("F","f") ~ "Female",
   TRUE ~ "Unknown"
 )) %>%
-dplyr::filter(state %in% c("NY","WA"))
+dplyr::mutate(collection=as.Date(as.integer(collection),
+                                 origin = as.Date("1899-30-12",format="%Y-%d-%m"))) %>%
+# dplyr::mutate(received=as.Date(as.integer(received),
+#                                origin = as.Date("1899-30-12",format="%Y-%d-%m"))) %>%
+dplyr::filter(state %in% c("NY","WA")) 
+  
 
-write.csv(labresults,file="labresults_4-16-2020.csv",row.names=F)
+labresultsunique <- filter(labresults,is.na(duplicate))
+
+labresultsduplicate <- 
+dplyr::filter(labresults,duplicate=="Yes") %>%
+  # sort in reverse order so the most recent result is first
+dplyr::arrange(desc(collection)) %>%
+  # keep only distinct records
+dplyr::distinct(age,sex,zip,duplicate,.keep_all=TRUE)
+
+labresults_clean <- bind_rows(labresultsunique,labresultsduplicate) %>%
+  select(-duplicate)
+
+write.csv(labresults_clean,file="labresults_dedup_4-16-2020.csv",row.names=F)
