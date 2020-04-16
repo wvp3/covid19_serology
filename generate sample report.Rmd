@@ -1,0 +1,62 @@
+---
+title: "Seroprevalence Samples"
+author: "Travis Lim, CDC/DGHT"
+date: "4/15/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE,warning=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+res1 <- readRDS("result1.rds")
+library(tidyverse)
+library(DT)
+```
+
+
+## number of samples by State and date
+```{r echo=FALSE,results='asis',warning=FALSE}
+
+res1 %>% 
+  #filter(state %in% c("NY","WA")) %>%
+  group_by(studystate,specimendate) %>% 
+  summarise(N_samples=n()) %>% 
+  tidyr::spread(specimendate,N_samples) %>%
+  ungroup() %>%
+  bind_rows(.,summarise_at(.,vars(2:length(names(.))),list(sum),na.rm=T)) %>%
+  mutate(studystate=ifelse(is.na(studystate),"Total",studystate)) %>%
+  mutate(total=select(.,2:length(names(.))) %>% rowSums(.,na.rm=T)) %>%
+  ungroup() %>%
+  datatable(rownames = F)
+```
+
+## number of samples by State and age group
+```{r echo=FALSE,results='asis',warning=FALSE}
+
+res1 %>% 
+  group_by(studystate,agegroup) %>% 
+  summarise(N_samples=n()) %>% 
+  tidyr::spread(agegroup,N_samples) %>%
+  select(studystate,`5-17`,names(.)) %>%
+  ungroup() %>%
+  bind_rows(.,summarise_at(.,vars(`5-17`:`80+`),list(sum))) %>%
+  mutate(studystate=ifelse(is.na(studystate),"Total",studystate)) %>%
+  mutate(total=select(.,2:length(names(.))) %>% rowSums(.,na.rm=T)) %>%
+  ungroup() %>%
+  datatable(rownames = F) 
+```
+
+## number of samples by State and gender
+```{r echo=FALSE,results='asis',warning=FALSE}
+
+res1 %>% 
+  #filter(state %in% c("NY","WA")) %>%
+  group_by(studystate,sex) %>% 
+  summarise(N_samples=n()) %>% 
+  tidyr::spread(sex,N_samples) %>%
+  ungroup() %>%
+  bind_rows(.,summarise_at(.,vars(Male,Female,`Not applicable`,Unknown),list(sum))) %>%
+  mutate(studystate=ifelse(is.na(studystate),"Total",studystate)) %>%
+  mutate(total=select(.,2:length(names(.))) %>% rowSums(.,na.rm=T)) %>%
+  ungroup() %>%
+  datatable(rownames = F)
+```
