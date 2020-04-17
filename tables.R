@@ -1,4 +1,4 @@
-##Need this to compute 95% confidence intervalso
+##Need this to compute 95% confidence intervals
 wilson_interval <- function(k, n, alpha = 0.05){
     p <- k/n
     z <- qnorm(p = 1-alpha/2)
@@ -17,6 +17,18 @@ sero <- read.csv(
     na.strings = "N/A"
 )
 
+##Read the old data in
+sero_old<- read.csv(
+    file = "./sero_2020_04_16.csv",
+    as.is = TRUE,
+    na.strings = "N/A"
+)
+
+png(filename="./age_by_year.png")
+hist(sero_old$AGE,breaks=seq(0,100))
+abline(v=20)
+dev.off()
+
 ##Use age groups as a factor
 sero$agegroup <- factor(
     x = sero$agegroup,
@@ -26,6 +38,22 @@ sero$agegroup <- factor(
         "50-64",
         "65-79",
         "80+"
+    ),
+    labels = c(
+        "5-17",
+        "18-49",
+        "50-64",
+        "65+",
+        "65+"
+    )
+)
+##Use sex as factor
+sero$sex <- factor(
+    x = sero$sex,
+    levels = c(
+        "Male",
+        "Female",
+        "Unknown"
     )
 )
 
@@ -171,9 +199,9 @@ for(n in 1:2){
             sero[WA_row_index, "agegroup"]
         )
         y1.max <- 200
-        y2.max <- 8
+        y2.max <- 35
         ticks1 <- 9
-        ticks2 <- 9
+        ticks2 <- 8
     }
     if(n == 2){
         png(
@@ -186,9 +214,19 @@ for(n in 1:2){
             sero[NY_row_index, "agegroup"]
         )
         y1.max <- 450
-        y2.max <- 30
+        y2.max <- 65
         ticks1 <- 10
         ticks2 <- 5
+    }
+    ci<-matrix(
+        nrow = ncol(tbl_results),
+        ncol = 2
+    )
+    for(i in 1:nrow(ci)){
+        ci[i,] <- wilson_interval(
+            k = tbl_results["REACTIVE",i],
+            n = colSums(tbl_results)[i]
+        )[["ci"]]
     }
     this.cex <- 2
     par(
@@ -213,6 +251,23 @@ for(n in 1:2){
         pch = 16,
         cex = 2
     )
+    for(i in 1:nrow(ci)){
+        segments(
+            x0 = bp[i],
+            y0 = ci[i,1]/y2.max,
+            y1 = ci[i,2]/y2.max
+        )
+        segments(
+            x0 = bp[i] - 0.1,
+            x1 = bp[i] + 0.1,
+            y0 = ci[i,1]/y2.max
+        )
+        segments(
+            x0 = bp[i] - 0.1,
+            x1 = bp[i] + 0.1,
+            y0 = ci[i,2]/y2.max
+        )
+    }
     axis(
         2,
         at = seq(0, 1, length.out = ticks1),
