@@ -1,3 +1,4 @@
+library(abind)
 ##Need this to compute 95% confidence intervals
 wilson_interval <- function(k, n, alpha = 0.05){
     p <- k/n
@@ -12,22 +13,10 @@ wilson_interval <- function(k, n, alpha = 0.05){
 
 ##Read the latest version of the data in
 sero <- read.csv(
-    file = "labresults_dedup_4-16-2020.csv",
+    file = "labresults_dedup_4-20-2020_AM.csv",
     as.is = TRUE,
     na.strings = "N/A"
 )
-
-##Read the old data in
-sero_old<- read.csv(
-    file = "./sero_2020_04_16.csv",
-    as.is = TRUE,
-    na.strings = "N/A"
-)
-
-png(filename="./age_by_year.png")
-hist(sero_old$AGE,breaks=seq(0,100))
-abline(v=20)
-dev.off()
 
 ##Use age groups as a factor
 sero$agegroup <- factor(
@@ -183,6 +172,104 @@ for(k in 1:2){
             row.names = FALSE
         )
     }
+    ##Make tables of age group by sex
+    for(sex in c("Male","Female")){
+        write.table(
+            x = matrix(
+                data = xc("", sex),
+                ncol = 1
+            ),
+            file = "./tabular_stats.csv",
+            append = TRUE,
+            col.names = FALSE,
+            row.names = FALSE
+        )
+
+        ##Make a subindex of rows
+        row_sub_index <- which(
+            sero[row_index , "sex"] == sex
+        )
+        ##Find the counts
+        tbl_results <- table(
+            sero[row_index[row_sub_index], "agegroup"],
+            sero[row_index[row_sub_index], "results"]
+        )
+        ##Find the marginals
+        tbl_results <- cbind(
+            tbl_results,
+            TOTAL = rowSums(tbl_results)
+        )
+        tbl_results <- rbind(
+            tbl_results,
+            TOTAL = colSums(tbl_results)
+        )
+        ##Find the seroprevalence and 95% confidence intervals
+        tbl_results <- cbind(
+            tbl_results,
+            sero = rep(
+                NA,
+                nrow(tbl_results)
+            ),
+            ci_lb = rep(
+                NA,
+                nrow(tbl_results)
+            ),
+            ci_ub = rep(
+                NA,
+                nrow(tbl_results)
+            )
+        )
+        for(i in 1:nrow(tbl_results)){
+            tbl_results[
+                i,
+                c(
+                    "sero",
+                    "ci_lb",
+                    "ci_ub"
+                )
+            ] <- round(
+                unlist(
+                    x = wilson_interval(
+                        k = tbl_results[i, "REACTIVE"],
+                        n = tbl_results[i, "TOTAL"],
+                        alpha = 0.05
+                    )
+                ),
+                digits = 2
+            )
+        }
+        ##Make the results in the format for a presentation
+        tbl_results_csv <- cbind(
+            tbl_results,
+            ci = paste0(
+                "(",
+                tbl_results[, "ci_lb"],
+                ", ",
+                tbl_results[, "ci_ub"],
+                ")"
+            )
+        )
+        ##Write the table to our CSV
+        write.table(
+            x = tbl_results_csv,
+            file = "./tabular_stats.csv",
+            append = TRUE,
+            sep = ",",
+            row.names = TRUE,
+            col.names = NA
+        )
+        ##Add some white space in our CSV
+        write.table(
+            x = matrix(
+                data = rep("", 2),
+                ncol = 1
+            ),
+            file = "./tabular_stats.csv",
+            append = TRUE,
+            col.names = FALSE,
+            row.names = FALSE
+        )
+    }
 }
 
 
@@ -198,10 +285,10 @@ for(n in 1:2){
             sero[WA_row_index, "results"],
             sero[WA_row_index, "agegroup"]
         )
-        y1.max <- 200
-        y2.max <- 35
-        ticks1 <- 9
-        ticks2 <- 8
+        y1.max <- 450
+        y2.max <- 25
+        ticks1 <- 10
+        ticks2 <- 6
     }
     if(n == 2){
         png(
