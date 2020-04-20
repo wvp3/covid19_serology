@@ -176,7 +176,7 @@ for(k in 1:2){
     for(sex in c("Male","Female")){
         write.table(
             x = matrix(
-                data = xc("", sex),
+                data = c("", sex),
                 ncol = 1
             ),
             file = "./tabular_stats.csv",
